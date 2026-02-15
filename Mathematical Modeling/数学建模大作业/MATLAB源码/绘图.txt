@@ -1,0 +1,81 @@
+% 第一部分：
+clear;
+close all;
+clc;
+
+file_path = 'C:/Users/14053/Desktop/L1/F4data.xlsx';
+z_data = readmatrix(file_path);
+z_data = z_data(:); 
+
+x_min = 51250;
+x_max = 64500;
+y_min = 78750;
+y_max = 92000;
+num_points = 266;
+
+x_coords = linspace(x_min, x_max, num_points);
+y_coords = linspace(y_min, y_max, num_points);
+
+[X, Y] = meshgrid(x_coords, y_coords);
+Z = reshape(z_data, [num_points, num_points]);
+
+fig = figure('Position', [100, 100, 1000, 800]);
+ax = axes('Parent', fig, 'Projection', '3d');
+
+x_points = X(:);
+y_points = Y(:);
+z_points = Z(:);
+
+scatter3(ax, x_points, y_points, z_points, [], z_points, 'Marker', 'o', 'CDataMapping', 'scaled', 'MarkerFaceColor', 'flat', 'MarkerEdgeColor', 'flat', 'Colormap', 'coolwarm');
+
+contour3(X, Y, Z, 50, 'Color', 'k', 'LineWidth', 0.2);
+
+cbar = colorbar(ax, 'Location', 'right', 'Scale', 'linear', 'Shrink', 0.5, 'Aspect', 10);
+
+xlabel(ax, 'X Coordinate (meters)');
+ylabel(ax, 'Y Coordinate (meters)');
+zlabel(ax, 'Z Value');
+title(ax, 'F2_collaborative_variable4 3D Scatterplot Visualization');
+
+drawnow;
+
+
+% 第二部分
+clear;
+close all;
+clc;
+
+file_path = 'C:/Users/14053/Desktop/L1/F1_collaborative_variable4.xlsx';
+z_data = readmatrix(file_path);
+
+x_min = 51250;
+x_max = 64500;
+num_points = 266;
+
+x_coords = linspace(x_min, x_max, num_points);
+
+fig = figure('Position', [100, 100, 1000, 800]);
+ax = axes('Parent', fig);
+
+colors = viridis(num_points);
+
+point_size = 1;
+
+for i = 1:num_points
+    scatter(ax, x_coords, z_data(i, :), [], colors(i, :), 'Marker', 'o', 'SizeData', point_size);
+    if mod(i, 50) == 0
+        legendEntry = sprintf('Line %d', i);
+        hold on;
+        plot(ax, x_coords(1), z_data(i, 1), 'Marker', 'o', 'Color', colors(i, :), 'DisplayName', legendEntry);
+        hold off;
+    end
+end
+
+ylim(ax, [0, 0.5]);
+y_ticks = 0:0.05:0.5;
+set(ax, 'YTick', y_ticks);
+
+xlabel(ax, 'X Coordinate (meters)');
+ylabel(ax, 'Z Value');
+
+drawnow;

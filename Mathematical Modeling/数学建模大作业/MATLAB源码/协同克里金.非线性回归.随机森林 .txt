@@ -1,0 +1,138 @@
+clear;
+close all;
+clc;
+
+target_df = readmatrix('C:/Users/14053/Desktop/L1/targetdata.xlsx');
+covariate_df = readmatrix('C:/Users/14053/Desktop/L1/F1_collaborative_variable1.xlsx');
+target_data = target_df;
+covariate_data = covariate_df;
+
+x_min = 51250;
+x_max = 64500;
+y_min = 78750;
+y_max = 92000;
+x_coords = linspace(x_min, x_max, 266);
+y_coords = linspace(y_min, y_max, 266);
+[X, Y] = meshgrid(x_coords, y_coords);
+coords = [X(:) Y(:)];
+
+function [sampled_data, sampled_coords] = random_resampling(data, coords, n_samples)
+    sample_indices = randsample(numel(data), n_samples, false);
+    sampled_data = data(sample_indices);
+    sampled_coords = coords(sample_indices, :);
+    return;
+end
+
+function vario = linear_variogram(h, sill, range_param, nugget)
+    if h <= range_param
+        vario = nugget + (sill / range_param) * h;
+    else
+        vario = nugget + sill;
+    end
+end
+
+classdef CoKriging
+    properties
+        target_data
+        covariate_data
+        coords
+        sill = 1.0;
+        range_param = 1.0;
+        nugget = 0.1;
+        C11
+        C12
+        C22
+    end
+
+    methods
+        function self = CoKriging(target_data, covariate_data, coords, sill, range_param, nugget)
+            self.target_data = target_data;
+            self.covariate_data = covariate_data;
+            self.coords = coords;
+            self.sill = sill;
+            self.range_param = range_param;
+            self.nugget = nugget;
+            [self.C11, self.C12, self.C22] = self.compute_covariance_matrix();
+        end
+
+        function [C11, C12, C22] = compute_covariance_matrix(self)
+            n = size(self.coords, 1);
+            C11 = zeros(n, n);
+            C12 = zeros(n, n);
+            C22 = zeros(n, n);
+
+            for i = 1:n
+                for j = 1:n
+                    dist = norm(self.coords(i, :) - self.coords(j, :));
+                    cov = linear_variogram(dist, self.sill, self.range_param, self.nugget);
+                    C11(i, j) = C11(j, i) = cov;
+                    C22(i, j) = C22(j, i) = cov;
+                    C12(i, j) = C12(j, i) = cov;
+                end
+            end
+
+            return C11, C12, C22;
+        end
+
+        function z_pred = predict(self, coords_pred)
+            n = size(self.coords, 1);
+            m = size(coords_pred, 1);
+            C0 = zeros(n, m);
+
+            for i = 1:n
+                for j = 1:m
+                    dist = norm(self.coords(i, :) - coords_pred(j, :));
+                    C0(i, j) = linear_variogram(dist, self.sill, self.range_param, self.nugget);
+                end
+            end
+
+            C_inv = inv(self.C11);
+            w = C_inv * C0;
+            z_pred = w' * self.target_data;
+
+            return z_pred;
+        end
+    end
+end
+
+sample_sizes = [50, 200, 500, 1000, 2000, 3000];
+errors_mae = [];
+errors_r2 = [];
+
+for size = sample_sizes
+    [Z2_sampled, coords_sampled] = random_resampling(target_data, coords, size);
+    [Z1_sampled, ~] = random_resampling(covariate_data, coords, size);
+
+    co_kriging = CoKriging(Z2_sampled, Z1_sampled, coords_sampled);
+
+    z_pred = co_kriging.predict(coords);
+    z_pred = reshape(z_pred, size(target_data));
+
+    rf_model = TreeBagger(100, Z1_sampled, Z2_sampled, 'Method', 'regression', 'OOBVarImp', 'off');
+
+    rf_corrected_pred = predict(rf_model, Z1_sampled);
+
+    mae = mean(abs(Z2_sampled - rf_corrected_pred));
+    r2 = corrcoef(Z2_sampled, rf_corrected_pred)^2(1, 2);
+
+    errors_mae = [errors_mae; mae];
+    errors_r2 = [errors_r2; r2];
+
+    figure('Position', [100, 100, 800, 600]);
+    contourf(X, Y, reshape(z_pred, size(X)), 'viridis');
+    colorbar('label', 'Predicted F1_target');
+    title(['Co-Kriging and Random Forest Prediction (Sample Size = ', num2str(size), ')']);
+    drawnow;
+end
+
+figure('Position', [100, 100, 800, 600]);
+plot(sample_sizes, errors_mae, 'o-', 'DisplayName', 'MAE');
+hold on;
+plot(sample_sizes, errors_r2, 'o-', 'DisplayName', 'R²');
+xlabel('Sample Size');
+ylabel('Error');
+legend('show');
+title('Error vs Sample Size (MAE and R²)');
+drawnow;
+
+fprintf('最小值: %f, 最大值: %f\n', min(z_pred), max(z_pred));

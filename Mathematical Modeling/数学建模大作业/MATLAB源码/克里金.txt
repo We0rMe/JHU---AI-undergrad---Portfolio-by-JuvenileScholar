@@ -1,0 +1,84 @@
+clear;
+close all;
+clc;
+
+file_path = 'C:/Users/14053/Desktop/L1/targetdata.xlsx';
+data_df = readmatrix(file_path);
+matrix_266x266 = data_df;
+
+x_min = 51250;
+x_max = 64500;
+y_min = 78750;
+y_max = 92000;
+x_coords = linspace(x_min, x_max, 266);
+y_coords = linspace(y_min, y_max, 266);
+[X, Y] = meshgrid(x_coords, y_coords);
+
+function plot_sampling_points(sample_x_coords, sample_y_coords, sample_size)
+    figure('Position', [100, 100, 800, 600]);
+    scatter(sample_x_coords, sample_y_coords, 10, 'red', 'filled', 'o');
+    xlim([x_min, x_max]);
+    ylim([y_min, y_max]);
+    title(['Sampling Points Distribution (Sample Size: ', num2str(sample_size), ')']);
+    xlabel('X Coordinate');
+    ylabel('Y Coordinate');
+    legend('Sample Points');
+    grid on;
+    drawnow;
+end
+
+function error = kriging_interpolation_lhs(sample_size)
+    lhs_samples = lhsdesign(sample_size, 2);
+    lhs_samples(:, 1) = lhs_samples(:, 1) * 265;
+    lhs_samples(:, 1) = round(lhs_samples(:, 1));
+    lhs_samples(:, 2) = lhs_samples(:, 2) * 265;
+    lhs_samples(:, 2) = round(lhs_samples(:, 2));
+
+    sample_x = lhs_samples(:, 1) + 1; 
+    sample_y = lhs_samples(:, 2) + 1;
+
+    sample_x_coords = x_coords(sample_x);
+    sample_y_coords = y_coords(sample_y);
+    sample_values = matrix_266x266(sample_y, sample_x);
+
+    plot_sampling_points(sample_x_coords, sample_y_coords, sample_size);
+
+    OK = kriging(sample_x_coords, sample_y_coords, sample_values, 'variogram_model','spherical', 'enable_plotting', false);
+    [grid_values, ~] = OK.execute('grid', x_coords, y_coords);
+
+    figure('Position', [100, 100, 800, 600]);
+    contourf(X, Y, grid_values, 50, 'coolwarm');
+    contour(X, Y, grid_values, 50, 'k', 'linewidth', 0.2);
+    scatter(sample_x_coords, sample_y_coords, 5, 'blue', 'filled', 'o');
+    colorbar;
+    title(['Kriging Interpolation (Sample Size: ', num2str(sample_size), ')']);
+    xlabel('X Coordinate');
+    ylabel('Y Coordinate');
+    legend('Sample Points');
+    drawnow;
+
+    all_indices = 1:266 * 266;
+    unsampled_indices = setdiff(all_indices, sample_y * 266 + sample_x);
+    unsampled_x = mod(unsampled_indices, 266);
+    unsampled_y = floor(unsampled_indices / 266);
+    true_values = matrix_266x266(unsampled_y + 1, unsampled_x + 1);
+    interpolated_values = grid_values(unsampled_y + 1, unsampled_x + 1);
+    error = mean(abs(true_values - interpolated_values));
+    fprintf('Sample Size: %d, Mean Absolute Error: %f\n', sample_size, error);
+end
+
+sample_sizes = [50, 200, 500, 1000, 2000, 3000];
+errors = [];
+for size = sample_sizes
+    error = kriging_interpolation_lhs(size);
+    errors = [errors; error];
+end
+
+figure('Position', [100, 100, 800, 600]);
+plot(sample_sizes, errors, 'o-', 'Color', 'b');
+title('Relationship between Sample Size and Estimation Error');
+xlabel('Sample Size');
+ylabel('Mean Absolute Error');
+grid on;
+legend('Mean Absolute Error');
+drawnow;

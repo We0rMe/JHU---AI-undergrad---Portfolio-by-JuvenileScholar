@@ -1,0 +1,57 @@
+clear;
+close all;
+clc;
+
+file_path = 'C:\Users\14053\Desktop\L1\F1_target_variable.txt';
+
+data = [];
+all_data = [];
+
+fid = fopen(file_path, 'r');
+if fid == -1
+    error('无法打开文件');
+end
+
+for i = 1:6
+    fgets(fid);
+end
+
+i = 0;
+while true
+    line = fgets(fid);
+    if ~ischar(line)
+        break;
+    end
+
+    line = strtrim(line); 
+    if ~isempty(line) 
+        numbers = str2num(line); 
+        all_data = [all_data, numbers]; 
+        i = i + 1;
+        if i == 14364
+            break;
+        end
+    end
+end
+
+fclose(fid);
+
+data_array = all_data;
+assert(numel(data_array) == 70756, "数据的数量不匹配，应该是266 * 266个数字");
+
+df = array2table(data_array, 'VariableNames', {'Value'});
+
+output_path = 'C:/Users/14053/Desktop/L1/targetdata.xlsx';
+writetable(df, output_path, 'WriteVariableNames', false, 'WriteRowNames', false);
+
+matrix_266x266 = reshape(data_array, 266, 266);
+
+disp(matrix_266x266);
+disp(size(matrix_266x266));
+
+df = array2table(matrix_266x266);
+
+output_path = 'C:/Users\14053\Desktop\shuwei_cup\B\Attachment_1\alldata.xlsx';
+writetable(df, output_path, 'WriteVariableNames', false, 'WriteRowNames', false);
+
+disp(['矩阵已成功保存到 ', output_path]);

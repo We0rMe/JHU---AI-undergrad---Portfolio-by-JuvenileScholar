@@ -1,0 +1,74 @@
+clear;
+close all;
+clc;
+
+F1_mubiao = readtable('C:\Users\BY\Desktop\F1_over.xlsx', 'Sheet', 'F_mubiao');
+F1_1 = readtable('C:\Users\BY\Desktop\F1_over.xlsx', 'Sheet', 'F1_1');
+F1_2 = readtable('C:\Users\BY\Desktop\F1_over.xlsx', 'Sheet', 'F1_2');
+F1_3 = readtable('C:\Users\BY\Desktop\F1_over.xlsx', 'Sheet', 'F1_3');
+F1_4 = readtable('C:\Users\BY\Desktop\F1_over.xlsx', 'Sheet', 'F1_4');
+
+F1_mubiao_flat = F1_mubiao{:,:};
+F1_mubiao_flat = F1_mubiao_flat(:);
+F1_1_flat = F1_1{:,:};
+F1_1_flat = F1_1_flat(:);
+F1_2_flat = F1_2{:,:};
+F1_2_flat = F1_2_flat(:);
+F1_3_flat = F1_3{:,:};
+F1_3_flat = F1_3_flat(:);
+F1_4_flat = F1_4{:,:};
+F1_4_flat = F1_4_flat(:);
+
+correlations = struct;
+correlations.F1_1 = corr(F1_mubiao_flat, F1_1_flat, 'Type', 'Pearson');
+correlations.F1_2 = corr(F1_mubiao_flat, F1_2_flat, 'Type', 'Pearson');
+correlations.F1_3 = corr(F1_mubiao_flat, F1_3_flat, 'Type', 'Pearson');
+correlations.F1_4 = corr(F1_mubiao_flat, F1_4_flat, 'Type', 'Pearson');
+
+fprintf("与 F1_mubiao 的相关性：\n");
+fields = fieldnames(correlations);
+for i = 1:length(fields)
+    key = fields{i};
+    value = correlations.(key);
+    fprintf("%s: %f\n", key, value);
+end
+
+spearman_correlations = struct;
+spearman_correlations.F1_1 = corr(F1_mubiao_flat, F1_1_flat, 'Type', 'Spearman');
+spearman_correlations.F1_2 = corr(F1_mubiao_flat, F1_2_flat, 'Type', 'Spearman');
+spearman_correlations.F1_3 = corr(F1_mubiao_flat, F1_3_flat, 'Type', 'Spearman');
+spearman_correlations.F1_4 = corr(F1_mubiao_flat, F1_4_flat, 'Type', 'Spearman');
+
+fprintf("与 F1_mubiao 的斯皮尔曼相关性：\n");
+fields = fieldnames(spearman_correlations);
+for i = 1:length(fields)
+    key = fields{i};
+    value = spearman_correlations.(key);
+    fprintf("%s: %f\n", key, value);
+end
+
+fprintf("斯皮尔曼相关系数:\n");
+fields = fieldnames(spearman_correlations);
+for i = 1:length(fields)
+    key = fields{i};
+    value = spearman_correlations.(key);
+    fprintf("%s: %f\n", key, value);
+end
+
+all_data = table(F1_mubiao_flat, F1_1_flat, F1_2_flat, F1_3_flat, F1_4_flat, 'VariableNames', {'F1_target_variable', 'F1_collaborative_variable1', 'F1_collaborative_variable2', 'F1_collaborative_variable3', 'F1_collaborative_variable4'});
+
+correlation_matrix = corrcoef(all_data{:,:});
+
+figure('Position', [100, 100, 1000, 800]);
+heatmap(correlation_matrix, 'Colormap', 'coolwarm', 'CellLabelFormat', '%0.2f', 'ColorbarVisible', true, 'GridVisible', false);
+title('Pearson Correlation Heatmap');
+drawnow;
+
+all_data = table(F1_mubiao_flat, F1_1_flat, F1_2_flat, F1_3_flat, F1_4_flat, 'VariableNames', {'F1_target_variable', 'F1_collaborative_variable1', 'F1_collaborative_variable2', 'F1_collaborative_variable3', 'F1_collaborative_variable4'});
+
+spearman_corr_matrix = corrcoef(all_data{:,:}, 'Type', 'Spearman');
+
+figure('Position', [100, 100, 1000, 800]);
+heatmap(spearman_corr_matrix, 'Colormap', 'coolwarm', 'CellLabelFormat', '%0.2f', 'ColorbarVisible', true, 'GridVisible', false);
+title('Spearman Correlation Heatmap');
+drawnow;
