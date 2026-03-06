@@ -4,6 +4,7 @@ As a 2022 AI undergraduate at Jianghan University, this repository archives all 
 
 The relevant content is in the MASTER branch. 
 
+" Student Survival Manual of Jianghan University "(part) are in the SSM-JHU branch.
 
 ⚠️⚠️⚠️IMPORTANT: Please read CN_README.txt carefully before referencing any resources!⚠️⚠️⚠️
 
